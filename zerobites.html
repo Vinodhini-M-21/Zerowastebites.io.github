@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZeroWasteBites</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        body {
+            background-color: #7F00FF;
+            color: #F0F0F0;
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            padding: 20px;
+            max-width: 800px;
+            margin: auto;
+        }
+        button {
+            background-color: #8E44AD;
+            color: white;
+            padding: 15px;
+            border: none;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #732d91;
+        }
+        .page {
+            display: none;
+            padding: 20px;
+        }
+        input, textarea, select {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border: none;
+        }
+        .back-btn {
+            background-color: red;
+        }
+        #rewardsSection {
+            margin-top: 20px;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body onload="checkMonthlyReport(); updateRewardsDisplay();">
+
+    <div class="container">
+        <div id="homePage" class="page">
+            <h1>Welcome to ZeroWasteBites</h1>
+            <p id="rewardPoints">Total Rewards: 0 Points</p>
+            <button onclick="showPage('donatePage')">Donate Food</button>
+            <button onclick="showPage('foodAvailabilityPage')">Food Availability</button>
+            <button onclick="showPage('compostingPage')">Composting</button>
+            <div id="rewardsSection">
+                <button id="claimRewardBtn" onclick="claimReward()" style="display:none;">Claim Reward</button>
+            </div>
+        </div>
+
+        <div id="donatePage" class="page">
+            <h2>Register as Donor</h2>
+            <label>Donor Name:</label>
+            <input type="text" id="name">
+            
+            <label>Contact Number:</label>
+            <input type="tel" id="phone">
+            
+            <label>Location:</label>
+            <input type="text" id="location">
+            
+            <label>Food Details:</label>
+            <textarea id="foodDetails"></textarea>
+            
+            <label>Food Quality:</label>
+            <select id="quality">
+                <option value="Fresh">Fresh (+10 Points)</option>
+                <option value="Recently Cooked">Recently Cooked (+7 Points)</option>
+                <option value="Leftover">Leftover (+5 Points)</option>
+            </select>
+
+            <button onclick="saveDonation()">Submit Donation</button>
+            <button class="back-btn" onclick="showPage('homePage')">Back</button>
+        </div>
+
+        <div id="foodAvailabilityPage" class="page">
+            <h2>Food Availability</h2>
+            <ul id="foodList"></ul>
+            <button class="back-btn" onclick="showPage('homePage')">Back</button>
+        </div>
+
+        <div id="compostingPage" class="page">
+            <h2>Composting Instructions</h2>
+            <p>Food older than 24 hours should be composted.</p>
+            <button class="back-btn" onclick="showPage('homePage')">Back</button>
+        </div>
+    </div>
+
+    <script>
+        function showPage(pageId) {
+            document.querySelectorAll(".page").forEach(page => page.style.display = "none");
+            document.getElementById(pageId).style.display = "block";
+        }
+        showPage('homePage');
+
+        function saveDonation() {
+            let name = document.getElementById("name").value;
+            let phone = document.getElementById("phone").value;
+            let location = document.getElementById("location").value;
+            let foodDetails = document.getElementById("foodDetails").value;
+            let quality = document.getElementById("quality").value;
+
+            let points = (quality === "Fresh") ? 10 : (quality === "Recently Cooked") ? 7 : 5;
+
+            let donation = { name, phone, location, foodDetails, quality, points, date: new Date().toISOString().split('T')[0] };
+            let donations = JSON.parse(localStorage.getItem("donations")) || [];
+            donations.push(donation);
+            localStorage.setItem("donations", JSON.stringify(donations));
+
+            let totalPoints = parseInt(localStorage.getItem("rewardPoints") || "0") + points;
+            localStorage.setItem("rewardPoints", totalPoints);
+            updateRewardsDisplay();
+
+            alert("Donation Saved! You earned " + points + " points!");
+            document.getElementById("donatePage").querySelectorAll("input, textarea").forEach(input => input.value = "");
+            showPage('homePage');
+        }
+
+        function loadFoodAvailability() {
+            let foodList = document.getElementById("foodList");
+            foodList.innerHTML = "";
+            let donations = JSON.parse(localStorage.getItem("donations")) || [];
+            donations.forEach(donation => {
+                let li = document.createElement("li");
+                li.textContent = `${donation.date}: ${donation.name} - ${donation.foodDetails}`;
+                foodList.appendChild(li);
+            });
+        }
+
+        function updateRewardsDisplay() {
+            let points = parseInt(localStorage.getItem("rewardPoints") || "0");
+            document.getElementById("rewardPoints").innerText = "Total Rewards: " + points + " Points";
+
+            if (points >= 50) {
+                document.getElementById("claimRewardBtn").style.display = "block";
+            } else {
+                document.getElementById("claimRewardBtn").style.display = "none";
+            }
+        }
+
+        function claimReward() {
+            alert("Congratulations! You've claimed a reward. Your points have been reset.");
+            localStorage.setItem("rewardPoints", "0");
+            updateRewardsDisplay();
+        }
+
+        function checkMonthlyReport() {
+            let today = new Date();
+            let lastReportDate = localStorage.getItem("lastReportDate");
+
+            if (!lastReportDate || new Date(lastReportDate).getMonth() !== today.getMonth()) {
+                sendMonthlyReport();
+                localStorage.setItem("lastReportDate", today);
+            }
+        }
+
+        function sendMonthlyReport() {
+            const { jsPDF } = window.jspdf;
+            let doc = new jsPDF();
+            let donations = JSON.parse(localStorage.getItem("donations")) || [];
+            let text = "📅 Monthly Donation Report\n\n";
+
+            if (donations.length === 0) {
+                alert("No donations recorded for the month.");
+                return;
+            }
+
+            donations.forEach((donation, index) => {
+                text += `${index + 1}. ${donation.date} - ${donation.name}, ${donation.location}, ${donation.phone}, ${donation.foodDetails}, ${donation.quality}\n`;
+            });
+
+            doc.text(text, 10, 10);
+            let pdfData = doc.output("datauristring");
+
+            let mailtoLink = `mailto:vinodhinim68@gmail.com?subject=Monthly Donation Report&body=Attached is the monthly report.&attachment=${encodeURIComponent(pdfData)}`;
+            window.location.href = mailtoLink;
+        }
+    </script>
+
+</body>
+</html>
