@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Unit Converter</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f2f2f2;
+      text-align: center;
+      padding: 30px;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: auto;
+      background: #fff;
+      padding: 25px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+
+    input, select, button {
+      margin: 10px;
+      padding: 10px;
+      font-size: 1rem;
+      width: 70%;
+    }
+
+    button {
+      background: #4CAF50;
+      color: white;
+      border: none;
+      cursor: pointer;
+      border-radius: 5px;
+    }
+
+    button:hover {
+      background: #45a049;
+    }
+
+    #result {
+      font-size: 1.2rem;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Unit Converter</h1>
+
+    <label for="category">Select Category:</label>
+    <select id="category" onchange="changeCategory()">
+      <option value="length">Length</option>
+      <option value="temperature">Temperature</option>
+      <option value="weight">Weight</option>
+    </select>
+
+    <div class="converter">
+      <input type="number" id="inputValue" placeholder="Enter value">
+      
+      <select id="fromUnit"></select>
+      <select id="toUnit"></select>
+      
+      <button onclick="convert()">Convert</button>
+      <p id="result"></p>
+    </div>
+  </div>
+
+  <script>
+    const units = {
+      length: ['Meters', 'Kilometers', 'Feet', 'Inches'],
+      temperature: ['Celsius', 'Fahrenheit', 'Kelvin'],
+      weight: ['Kilograms', 'Grams', 'Pounds', 'Ounces']
+    };
+
+    window.onload = () => {
+      changeCategory();
+    };
+
+    function changeCategory() {
+      const category = document.getElementById('category').value;
+      const fromUnit = document.getElementById('fromUnit');
+      const toUnit = document.getElementById('toUnit');
+
+      fromUnit.innerHTML = '';
+      toUnit.innerHTML = '';
+
+      units[category].forEach(unit => {
+        const option1 = document.createElement('option');
+        option1.value = unit;
+        option1.textContent = unit;
+        fromUnit.appendChild(option1);
+
+        const option2 = document.createElement('option');
+        option2.value = unit;
+        option2.textContent = unit;
+        toUnit.appendChild(option2);
+      });
+    }
+
+    function convert() {
+      const category = document.getElementById('category').value;
+      const from = document.getElementById('fromUnit').value;
+      const to = document.getElementById('toUnit').value;
+      const value = parseFloat(document.getElementById('inputValue').value);
+      let result = 0;
+
+      if (isNaN(value)) {
+        document.getElementById('result').textContent = 'Please enter a valid number.';
+        return;
+      }
+
+      if (category === 'length') {
+        const meters = {
+          'Meters': 1,
+          'Kilometers': 0.001,
+          'Feet': 3.28084,
+          'Inches': 39.3701
+        };
+        result = value / meters[from] * meters[to];
+      } else if (category === 'temperature') {
+        if (from === to) {
+          result = value;
+        } else if (from === 'Celsius') {
+          if (to === 'Fahrenheit') result = value * 9/5 + 32;
+          else if (to === 'Kelvin') result = value + 273.15;
+        } else if (from === 'Fahrenheit') {
+          if (to === 'Celsius') result = (value - 32) * 5/9;
+          else if (to === 'Kelvin') result = (value - 32) * 5/9 + 273.15;
+        } else if (from === 'Kelvin') {
+          if (to === 'Celsius') result = value - 273.15;
+          else if (to === 'Fahrenheit') result = (value - 273.15) * 9/5 + 32;
+        }
+      } else if (category === 'weight') {
+        const kg = {
+          'Kilograms': 1,
+          'Grams': 1000,
+          'Pounds': 2.20462,
+          'Ounces': 35.274
+        };
+        result = value / kg[from] * kg[to];
+      }
+
+      document.getElementById('result').textContent = `Result: ${result.toFixed(4)} ${to}`;
+    }
+  </script>
+</body>
+</html>
